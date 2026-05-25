@@ -1,0 +1,27 @@
+{
+  "name": "moj-bet-radar",
+  "version": "0.1.0",
+  "description": "Balkan Match Risk Intelligence — enrichment pipeline and B2B data product",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "audit": "ts-node src/scripts/auditSportmonksCoverage.ts",
+    "demo:publisher-feed": "ts-node src/scripts/demoPublisherFeed.ts",
+    "demo:widget": "ts-node src/scripts/demoWidgetPayload.ts",
+    "demo:api": "ts-node src/scripts/demoApiResponses.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.43.0",
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
