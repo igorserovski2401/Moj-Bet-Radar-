@@ -53,12 +53,12 @@ export type StandingsSnapshotRow = {
   team_id: number;
   position: number;
   points: number;
-  played: number;
-  won: number;
-  drawn: number;
-  lost: number;
-  goals_for: number;
-  goals_against: number;
+  played: number | null;    // null if provider detail unavailable
+  won: number | null;
+  drawn: number | null;
+  lost: number | null;
+  goals_for: number | null;
+  goals_against: number | null;
   form: string | null;
   snapped_at: string;
 };

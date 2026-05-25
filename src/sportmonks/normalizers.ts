@@ -121,7 +121,7 @@ const STATE_MAP: Record<string, string> = {
   PEN: 'finished',
   CANC: 'cancelled',
   POSTP: 'postponed',
-  WO: 'finished',
+  WO: 'cancelled',
   TBA: 'scheduled',
 };
 
@@ -200,14 +200,21 @@ export function normalizeStandingRow(
   // Form string — try result or form field
   const formRaw = strOrNull(r['result'] ?? r['form']) ?? '';
 
-  // Detailed stats may be in a details array keyed by type_id,
-  // or flat fields on the object. We try flat first.
-  const played = num(r['played'] ?? r['games_played'], 0);
-  const won    = num(r['won'] ?? r['games_won'], 0);
-  const drawn  = num(r['draw'] ?? r['drawn'] ?? r['games_drawn'], 0);
-  const lost   = num(r['lost'] ?? r['games_lost'], 0);
-  const gf     = num(r['goals_scored'] ?? r['goals_for'], 0);
-  const ga     = num(r['goals_against'] ?? r['goals_conceded'], 0);
+  // Stats may be flat on the row or in a `details` array keyed by type_id.
+  // We try flat fields only. Never invent values — if missing, store null and warn.
+  const played = numOrNull(r['played'] ?? r['games_played']);
+  const won    = numOrNull(r['won'] ?? r['games_won']);
+  const drawn  = numOrNull(r['draw'] ?? r['drawn'] ?? r['games_drawn']);
+  const lost   = numOrNull(r['lost'] ?? r['games_lost']);
+  const gf     = numOrNull(r['goals_scored'] ?? r['goals_for']);
+  const ga     = numOrNull(r['goals_against'] ?? r['goals_conceded']);
+
+  const missingStats = [played, won, drawn, lost, gf, ga].filter((v) => v === null);
+  if (missingStats.length > 0) {
+    warnings.push(
+      `standings row team_id=${teamId}: ${missingStats.length} detail field(s) unavailable — stored as null`
+    );
+  }
 
   const row: StandingsSnapshotRow = {
     fixture_id: null,  // season-level snapshot

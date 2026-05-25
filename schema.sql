@@ -67,12 +67,12 @@ CREATE TABLE IF NOT EXISTS standings_snapshots (
   team_id       bigint NOT NULL REFERENCES teams(id),
   position      int NOT NULL,
   points        int NOT NULL,
-  played        int NOT NULL DEFAULT 0,
-  won           int NOT NULL DEFAULT 0,
-  drawn         int NOT NULL DEFAULT 0,
-  lost          int NOT NULL DEFAULT 0,
-  goals_for     int NOT NULL DEFAULT 0,
-  goals_against int NOT NULL DEFAULT 0,
+  played        int,    -- null if details unavailable from provider
+  won           int,
+  drawn         int,
+  lost          int,
+  goals_for     int,
+  goals_against int,
   form          text,
   snapped_at    timestamptz NOT NULL DEFAULT now()
 );

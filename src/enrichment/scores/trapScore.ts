@@ -6,10 +6,10 @@ export type TrapScoreInput = {
   readonly drawOdds: number;
   readonly homeRecentForm: FormRecord;
   readonly awayRecentForm: FormRecord;
-  readonly homeGoalsScoredLast5: number;
-  readonly homeGoalsConcededLast5: number;
-  readonly awayGoalsScoredLast5: number;
-  readonly awayGoalsConcededLast5: number;
+  readonly homeGoalsScoredLast5: number | null;
+  readonly homeGoalsConcededLast5: number | null;
+  readonly awayGoalsScoredLast5: number | null;
+  readonly awayGoalsConcededLast5: number | null;
   readonly homeMotivationScore?: number;
   readonly awayMotivationScore?: number;
   readonly oddsMovement?: number;
@@ -85,14 +85,18 @@ export function computeTrapScore(input: TrapScoreInput): ScoreResult {
     trapSignal += Math.min(80, divergence * 200);
   }
 
-  // Weak attacking form on a heavy favorite
-  const avgGoals = favoriteGoalsScored / 5;
-  if (favoriteMarketProb > 0.60 && avgGoals < 1.0) {
-    trapSignal += 20;
-    warnings.push(
-      `Heavy favorite (${Math.round(favoriteMarketProb * 100)}% market prob) ` +
-      `averaging ${avgGoals.toFixed(2)} goals/game over last 5`
-    );
+  // Weak attacking form on a heavy favorite (only if goals data available)
+  if (favoriteGoalsScored !== null) {
+    const avgGoals = favoriteGoalsScored / 5;
+    if (favoriteMarketProb > 0.60 && avgGoals < 1.0) {
+      trapSignal += 20;
+      warnings.push(
+        `Heavy favorite (${Math.round(favoriteMarketProb * 100)}% market prob) ` +
+        `averaging ${avgGoals.toFixed(2)} goals/game over last 5`
+      );
+    }
+  } else {
+    warnings.push('Goals last 5 data unavailable — weak-attack trap signal skipped');
   }
 
   // Motivation reversal: underdog more motivated than favorite

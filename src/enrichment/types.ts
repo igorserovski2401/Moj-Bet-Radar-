@@ -59,10 +59,10 @@ export type SeasonContext = {
 export type FormContext = {
   readonly homeRecentForm: FormRecord;
   readonly awayRecentForm: FormRecord;
-  readonly homeGoalsScoredLast5: number;
-  readonly homeGoalsConcededLast5: number;
-  readonly awayGoalsScoredLast5: number;
-  readonly awayGoalsConcededLast5: number;
+  readonly homeGoalsScoredLast5: number | null;
+  readonly homeGoalsConcededLast5: number | null;
+  readonly awayGoalsScoredLast5: number | null;
+  readonly awayGoalsConcededLast5: number | null;
 };
 
 export type OddsContext = {

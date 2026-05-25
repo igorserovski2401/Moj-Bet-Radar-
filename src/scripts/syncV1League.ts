@@ -41,6 +41,7 @@ async function main(): Promise<void> {
   const rawSeasonId = typeof args['season-id'] === 'string' ? args['season-id'] : process.env['DEFAULT_SEASON_ID'];
   const daysAhead = parseInt(String(args['days-ahead'] ?? '7'), 10);
   const daysBack  = parseInt(String(args['days-back']  ?? '1'), 10);
+  const skipOdds  = args['skip-odds'] === true;
 
   const leagueId = parseInt(rawLeagueId, 10);
   if (isNaN(leagueId)) { console.error('--league-id must be an integer'); process.exit(1); }
@@ -95,11 +96,15 @@ async function main(): Promise<void> {
   console.log('Step 5a/5: Syncing standings...');
   await syncStandings(client, resolvedSeasonId, db);
 
-  // 5b. Odds (optional — per fixture)
-  if (fixtureIds.length > 0) {
+  // 5b. Odds (optional — per fixture; skip with --skip-odds flag)
+  if (skipOdds) {
+    console.log('Step 5b/5: Odds sync skipped by flag.');
+  } else if (fixtureIds.length > 0) {
     console.log(`Step 5b/5: Syncing odds for ${fixtureIds.length} fixture(s)...`);
     const oddsSummary = await syncOddsForFixtures(client, fixtureIds, db);
     console.log(`  Odds summary: ${JSON.stringify(oddsSummary)}`);
+  } else {
+    console.log('Step 5b/5: No fixtures to sync odds for.');
   }
 
   console.log('');

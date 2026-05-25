@@ -152,6 +152,7 @@ export class SportmonksClient {
   }
 
   // Paginated GET — collects all pages, stops at maxPages to prevent runaway.
+  // If the cap is reached, logs a visible truncation warning — never hides it silently.
   async getAll<T>(
     path: string,
     params: Record<string, unknown> = {},
@@ -164,6 +165,12 @@ export class SportmonksClient {
       const items = Array.isArray(res.data) ? res.data : [];
       results.push(...items);
       if (!res.pagination?.has_more) break;
+      if (page === maxPages) {
+        console.warn(
+          `[sportmonks] WARNING: pagination truncated at ${maxPages} pages for ${path} — results may be incomplete`
+        );
+        break;
+      }
       page++;
     }
     return results;

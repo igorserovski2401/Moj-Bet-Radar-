@@ -24,8 +24,10 @@ function parseForm(formStr: string | null): MatchResult[] {
   return (formStr.toUpperCase().split('').filter((c) => c === 'W' || c === 'D' || c === 'L') as MatchResult[]).slice(-5);
 }
 
-function last5GoalsEstimate(goalsTotal: number, played: number): number {
-  if (played === 0) return 0;
+// Returns null if either input is null — never invent a goals estimate.
+function last5GoalsEstimate(goalsTotal: number | null, played: number | null): number | null {
+  if (goalsTotal === null || played === null) return null;
+  if (played === 0) return null;
   return Math.round((goalsTotal / played) * 5);
 }
 
@@ -193,15 +195,25 @@ export async function buildMatchEnrichmentContext(
     const awayForm = parseForm(awayStanding.form);
 
     if (homeForm.length > 0 || awayForm.length > 0) {
+      const hGF = last5GoalsEstimate(homeStanding.goals_for, homeStanding.played);
+      const hGA = last5GoalsEstimate(homeStanding.goals_against, homeStanding.played);
+      const aGF = last5GoalsEstimate(awayStanding.goals_for, awayStanding.played);
+      const aGA = last5GoalsEstimate(awayStanding.goals_against, awayStanding.played);
+
+      if ([hGF, hGA, aGF, aGA].some((v) => v === null)) {
+        warnings.push('goalsLast5 unavailable because goals_for or played is missing from standings');
+      } else {
+        warnings.push('goalsLast5 values are season-average estimates, not actual last-5 data');
+      }
+
       formCtx = {
         homeRecentForm: homeForm,
         awayRecentForm: awayForm,
-        homeGoalsScoredLast5: last5GoalsEstimate(homeStanding.goals_for, homeStanding.played),
-        homeGoalsConcededLast5: last5GoalsEstimate(homeStanding.goals_against, homeStanding.played),
-        awayGoalsScoredLast5: last5GoalsEstimate(awayStanding.goals_for, awayStanding.played),
-        awayGoalsConcededLast5: last5GoalsEstimate(awayStanding.goals_against, awayStanding.played),
+        homeGoalsScoredLast5: hGF,
+        homeGoalsConcededLast5: hGA,
+        awayGoalsScoredLast5: aGF,
+        awayGoalsConcededLast5: aGA,
       };
-      warnings.push('goalsLast5 values are season-average estimates, not actual last-5 data');
     } else {
       warnings.push('form strings empty in standings — FormContext unavailable');
     }

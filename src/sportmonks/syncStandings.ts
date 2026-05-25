@@ -30,12 +30,8 @@ export async function syncStandings(
     }
   }
 
-  if (standingRows.length === 0) {
-    console.warn('[syncStandings] no standings rows extracted for season', seasonId);
-    return;
-  }
-
-  // Store raw snapshot at season level: fixture_id = null, season_id = seasonId
+  // Always store raw snapshot — status reflects extraction result
+  const snapStatus = standingRows.length > 0 ? 'success' : 'partial';
   const { error: snapErr } = await db.from('match_feature_snapshots').insert({
     fixture_id: null,
     season_id: seasonId,
@@ -44,11 +40,16 @@ export async function syncStandings(
     normalized_payload: null,
     provider: 'sportmonks',
     fetched_at: now,
-    status: standingRows.length > 0 ? 'success' : 'partial',
-    error_message: null,
+    status: snapStatus,
+    error_message: standingRows.length === 0 ? 'no rows extracted from standings response' : null,
   });
   if (snapErr) {
     console.warn('[syncStandings] snapshot insert warning:', snapErr.message);
+  }
+
+  if (standingRows.length === 0) {
+    console.warn('[syncStandings] no standings rows extracted for season', seasonId);
+    return;
   }
 
   // Insert fresh snapshot rows (season-level: fixture_id = null)
