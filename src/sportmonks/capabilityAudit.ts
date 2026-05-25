@@ -89,12 +89,86 @@ export async function auditLeagueCoverage(
   const checkedAt = new Date().toISOString();
 
   if (!mockMode) {
-    // Real mode: TODO implement per-feature API probes using SportmonksClient
-    // For now throw to make the limitation explicit
-    throw new Error(
-      'Real audit mode not yet implemented — use --mock for now. ' +
-      'Each feature needs a dedicated probe in SportmonksClient.'
-    );
+    if (!options.seasonId) {
+      throw new Error('Real audit mode requires --season-id');
+    }
+    const { SportmonksClient } = await import('./client');
+    const client = SportmonksClient.fromEnv();
+
+    const probeMap: Partial<Record<SportmonksFeatureKey, () => Promise<import('./client').ProbeResult>>> = {
+      fixtures:   () => client.probe(`/fixtures/seasons/${options.seasonId}`),
+      teams:      () => client.probe(`/teams/seasons/${options.seasonId}`),
+      standings:  () => client.probe(`/standings/seasons/${options.seasonId}`),
+      odds:       () => options.seasonId
+        ? client.probe(`/odds/pre-match/fixtures/${options.seasonId}`)
+        : Promise.resolve({ available: false, error: 'no sample fixture id' }),
+    };
+
+    const records: FeatureCoverageResult[] = [];
+    for (const feature of SPORTMONKS_FEATURES) {
+      const probe = probeMap[feature.featureKey];
+      let coverageStatus: CoverageStatus;
+
+      if (probe) {
+        const result = await probe();
+        if (result.available) {
+          coverageStatus = 'available';
+        } else if (result.error?.includes('403') || result.error?.includes('401')) {
+          coverageStatus = 'error';
+        } else if (result.error?.includes('404') || result.error?.includes('422')) {
+          coverageStatus = 'missing';
+        } else {
+          coverageStatus = result.available ? 'available' : 'partial';
+        }
+      } else {
+        // Not probed in real mode — keep existing mock status as default
+        coverageStatus = MOCK_COVERAGE[feature.featureKey] ?? 'unknown';
+      }
+
+      records.push({
+        featureKey: feature.featureKey,
+        coverageStatus,
+        tier: FEATURE_TIERS[feature.featureKey],
+        notes: probe
+          ? `Real probe — ${checkedAt}`
+          : `Not probed in real mode — default from mock data`,
+      });
+    }
+
+    if (options.saveToDb) {
+      const { getSupabaseClient } = await import('../lib/supabaseClient');
+      const db = getSupabaseClient();
+      const dbRecords: FeatureCoverageRecord[] = records.map((r) => ({
+        countryCode,
+        leagueId,
+        seasonId,
+        featureKey: r.featureKey,
+        coverageStatus: r.coverageStatus,
+        checkedAt,
+        notes: r.notes,
+      }));
+      const { error } = await db
+        .from('sportmonks_feature_coverage')
+        .upsert(
+          dbRecords.map((r) => ({
+            country_code: r.countryCode,
+            league_id: r.leagueId ?? null,
+            season_id: r.seasonId ?? null,
+            feature_key: r.featureKey,
+            coverage_status: r.coverageStatus,
+            checked_at: r.checkedAt,
+            notes: r.notes ?? null,
+            sample_fixture_id: null,
+            sample_response_summary: null,
+          })),
+          // Supabase doesn't support expression-based unique conflict directly;
+          // insert with ignoreDuplicates as fallback
+          { ignoreDuplicates: false },
+        );
+      if (error) console.warn('[auditLeagueCoverage] DB save warning:', error.message);
+    }
+
+    return { options, records, summary: buildSummary(records) };
   }
 
   const records: FeatureCoverageResult[] = SPORTMONKS_FEATURES.map((feature) => {

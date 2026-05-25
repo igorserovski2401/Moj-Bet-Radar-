@@ -9,7 +9,12 @@
     "audit": "ts-node src/scripts/auditSportmonksCoverage.ts",
     "demo:publisher-feed": "ts-node src/scripts/demoPublisherFeed.ts",
     "demo:widget": "ts-node src/scripts/demoWidgetPayload.ts",
-    "demo:api": "ts-node src/scripts/demoApiResponses.ts"
+    "demo:api": "ts-node src/scripts/demoApiResponses.ts",
+    "sportmonks:test": "ts-node src/scripts/testSportmonksConnection.ts",
+    "sportmonks:audit:real": "ts-node src/scripts/auditRealCoverage.ts",
+    "sync:v1": "ts-node src/scripts/syncV1League.ts",
+    "enrich:v1": "ts-node src/scripts/enrichV1Fixtures.ts",
+    "feed:real": "ts-node src/scripts/generateRealPublisherFeed.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.43.0",

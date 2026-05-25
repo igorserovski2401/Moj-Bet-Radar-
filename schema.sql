@@ -61,19 +61,20 @@ CREATE INDEX IF NOT EXISTS idx_fixtures_kickoff ON fixtures(kickoff_at);
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS standings_snapshots (
-  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  fixture_id   bigint NOT NULL REFERENCES fixtures(id),
-  team_id      bigint NOT NULL REFERENCES teams(id),
-  position     int NOT NULL,
-  points       int NOT NULL,
-  played       int NOT NULL DEFAULT 0,
-  won          int NOT NULL DEFAULT 0,
-  drawn        int NOT NULL DEFAULT 0,
-  lost         int NOT NULL DEFAULT 0,
-  goals_for    int NOT NULL DEFAULT 0,
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  fixture_id    bigint REFERENCES fixtures(id),   -- NULL = season-level snapshot
+  season_id     bigint NOT NULL REFERENCES seasons(id),
+  team_id       bigint NOT NULL REFERENCES teams(id),
+  position      int NOT NULL,
+  points        int NOT NULL,
+  played        int NOT NULL DEFAULT 0,
+  won           int NOT NULL DEFAULT 0,
+  drawn         int NOT NULL DEFAULT 0,
+  lost          int NOT NULL DEFAULT 0,
+  goals_for     int NOT NULL DEFAULT 0,
   goals_against int NOT NULL DEFAULT 0,
-  form         text,
-  snapped_at   timestamptz NOT NULL DEFAULT now()
+  form          text,
+  snapped_at    timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_standings_fixture ON standings_snapshots(fixture_id);
