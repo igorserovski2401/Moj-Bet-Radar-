@@ -60,9 +60,9 @@ async function main(): Promise<void> {
   console.log('Step 1/5: Syncing league...');
   await syncLeague(client, leagueId, db);
 
-  // 2. Seasons
+  // 2. Seasons — resolved from league include or direct /seasons/{id} fallback
   console.log('Step 2/5: Syncing seasons...');
-  await syncSeasons(client, leagueId, db);
+  await syncSeasons(client, leagueId, db, seasonId);
 
   // Resolve seasonId — use provided or look up current from DB
   let resolvedSeasonId = seasonId;

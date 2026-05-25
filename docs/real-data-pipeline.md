@@ -16,6 +16,7 @@ Create `.env` in project root:
 ```
 SPORTMONKS_API_TOKEN=your_token_here
 SPORTMONKS_BASE_URL=https://api.sportmonks.com/v3/football
+SPORTMONKS_AUTH_MODE=query        # query (default) or header
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 MOCK_MODE=false
@@ -23,6 +24,10 @@ DEFAULT_COUNTRY=Serbia
 DEFAULT_LEAGUE_ID=271
 DEFAULT_SEASON_ID=23584
 ```
+
+`SPORTMONKS_AUTH_MODE=query` (default) sends `?api_token=...` as a query parameter.  
+`SPORTMONKS_AUTH_MODE=header` sends `Authorization: Bearer` instead.  
+If header mode returns 401, the client reports clearly and suggests switching to query mode.
 
 Never commit `.env`.
 
@@ -119,7 +124,7 @@ npm run feed:real -- --mock
 | Symptom | Cause | Action |
 |---------|-------|--------|
 | `SPORTMONKS_API_TOKEN not set` | Missing env var | Add to `.env` |
-| `HTTP 401` | Wrong token | Check token in Sportmonks dashboard |
+| `HTTP 401` | Wrong token or wrong auth mode | Check token; try `SPORTMONKS_AUTH_MODE=query` (default) |
 | `HTTP 403` | Endpoint not on plan | Feature unavailable on your subscription |
 | `HTTP 429` | Rate limit hit | Client retries automatically with backoff |
 | `standings upsert failed` | Schema not applied | Run `schema.sql` in Supabase |

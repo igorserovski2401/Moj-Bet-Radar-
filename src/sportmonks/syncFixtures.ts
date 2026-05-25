@@ -35,6 +35,7 @@ export async function syncFixtures(
 
     snapshotRows.push({
       fixture_id: row.id,
+      season_id: null,
       feature_key: 'fixtures',
       raw_payload: raw as Record<string, unknown>,
       normalized_payload: null,

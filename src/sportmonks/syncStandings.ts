@@ -8,25 +8,24 @@ export async function syncStandings(
   db: SupabaseClient,
 ): Promise<void> {
   const rawData = await client.getStandings(seasonId);
-
-  // Sportmonks may return a single object (one group) or an array (multiple groups/stages)
-  const groups: unknown[] = Array.isArray(rawData) ? rawData : [rawData];
   const now = new Date().toISOString();
+
+  // Sportmonks may return a single object (one group) or an array (multiple groups/stages).
+  const groups: unknown[] = Array.isArray(rawData) ? rawData : [rawData];
 
   const standingRows = [];
   for (const group of groups) {
-    // Each group may have a `standings` sub-array, or the items may be the group itself
     const groupObj = group as Record<string, unknown>;
     const items: unknown[] = Array.isArray(groupObj['standings'])
       ? groupObj['standings']
       : Array.isArray(group)
-      ? group as unknown[]
+      ? (group as unknown[])
       : [group];
 
     for (const raw of items) {
       const { row, warnings } = normalizeStandingRow(raw, seasonId);
       if (warnings.length > 0) console.warn('[syncStandings] warnings:', warnings);
-      if (row.team_id === 0) continue;  // skip rows with no team
+      if (row.team_id === 0) continue;  // skip rows with unresolved team
       standingRows.push(row);
     }
   }
@@ -36,22 +35,23 @@ export async function syncStandings(
     return;
   }
 
-  // Store raw snapshot
+  // Store raw snapshot at season level: fixture_id = null, season_id = seasonId
   const { error: snapErr } = await db.from('match_feature_snapshots').insert({
     fixture_id: null,
+    season_id: seasonId,
     feature_key: 'standings',
     raw_payload: rawData as Record<string, unknown>,
     normalized_payload: null,
     provider: 'sportmonks',
     fetched_at: now,
-    status: 'success',
+    status: standingRows.length > 0 ? 'success' : 'partial',
     error_message: null,
   });
   if (snapErr) {
     console.warn('[syncStandings] snapshot insert warning:', snapErr.message);
   }
 
-  // Upsert standings (insert new snapshots — no conflict key, always insert fresh)
+  // Insert fresh snapshot rows (season-level: fixture_id = null)
   const { error } = await db.from('standings_snapshots').insert(standingRows);
   if (error) throw new Error(`standings_snapshots insert failed: ${error.message}`);
   console.log(`[syncStandings] inserted ${standingRows.length} standing rows for season ${seasonId}`);

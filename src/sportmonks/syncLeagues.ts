@@ -22,8 +22,20 @@ export async function syncSeasons(
   client: SportmonksClient,
   leagueId: number,
   db: SupabaseClient,
+  fallbackSeasonId?: number,
 ): Promise<void> {
-  const rawSeasons = await client.getSeasons(leagueId);
+  // Resolves seasons from league include (currentSeason;seasons) or falls back
+  // to a direct /seasons/{id} call. Does NOT use /seasons/leagues/{leagueId}.
+  const rawSeasons = await client.resolveSeasons(leagueId, fallbackSeasonId);
+
+  if (rawSeasons.length === 0) {
+    console.warn(
+      '[syncSeasons] no seasons resolved for league', leagueId,
+      fallbackSeasonId ? `(fallback season ${fallbackSeasonId} also failed)` : '(no fallback season id provided)',
+    );
+    return;
+  }
+
   const rows = rawSeasons
     .map((r) => normalizeSeason(r, leagueId))
     .flatMap(({ row, warnings }) => {
@@ -31,12 +43,7 @@ export async function syncSeasons(
       return [row];
     });
 
-  if (rows.length === 0) {
-    console.warn('[syncSeasons] no seasons returned for league', leagueId);
-    return;
-  }
-
   const { error } = await db.from('seasons').upsert(rows, { onConflict: 'id' });
   if (error) throw new Error(`seasons upsert failed: ${error.message}`);
-  console.log(`[syncSeasons] upserted ${rows.length} seasons for league ${leagueId}`);
+  console.log(`[syncSeasons] upserted ${rows.length} season(s) for league ${leagueId}`);
 }

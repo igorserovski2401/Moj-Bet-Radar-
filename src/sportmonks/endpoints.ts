@@ -1,26 +1,33 @@
 // Sportmonks API v3 Football endpoint path builders.
-// Base URL is read from SPORTMONKS_BASE_URL env var (default: https://api.sportmonks.com/v3/football).
-// Authentication: Authorization: Bearer {token} header (never in query string).
+// Base URL: SPORTMONKS_BASE_URL env var (default: https://api.sportmonks.com/v3/football).
 //
-// UNCERTAINTY NOTES (verified against Sportmonks v3 public docs as of 2025):
-// - /leagues/{id}                  → confirmed
-// - /seasons/{id}                  → confirmed
-// - /seasons/leagues/{leagueId}    → confirmed
-// - /teams/seasons/{seasonId}      → confirmed
-// - /fixtures/seasons/{seasonId}   → confirmed
-// - /standings/seasons/{seasonId}  → confirmed
-// - /odds/pre-match/fixtures/{id}  → confirmed
-// - /fixtures/between/{from}/{to}  → confirmed (date format: YYYY-MM-DD)
-//   Filter by league: uncertain — may require ?filters[fixture_league_id]={id}
-//   Fallback: fetch all season fixtures, filter by date in app.
+// Auth: see client.ts — defaults to ?api_token query param (SPORTMONKS_AUTH_MODE=query).
+// Token is NEVER logged or included in error messages.
+//
+// CONFIRMED V1 ENDPOINTS (used in production sync):
+//   /leagues/{id}                          — league metadata
+//   /leagues/{id}?include=currentSeason;seasons — seasons resolution (embedded)
+//   /seasons/{id}                          — direct season fetch (fallback)
+//   /teams/seasons/{seasonId}              — teams for a season
+//   /fixtures/seasons/{seasonId}           — all fixtures for a season (paginated)
+//   /standings/seasons/{seasonId}          — standings for a season
+//   /odds/pre-match/fixtures/{fixtureId}   — pre-match odds for a fixture
+//
+// REMOVED (not verified live):
+//   /seasons/leagues/{leagueId}  — REJECTED: not confirmed; use league include instead
+//
+// UNCERTAIN (not yet used):
+//   /fixtures/between/{from}/{to} — date filter syntax unverified; we filter client-side instead
 
 export const ENDPOINTS = {
   leagues: {
     byId: (id: number): string => `/leagues/${id}`,
   },
   seasons: {
+    // Direct season fetch by ID — the reliable path when season ID is known
     byId: (id: number): string => `/seasons/${id}`,
-    byLeague: (leagueId: number): string => `/seasons/leagues/${leagueId}`,
+    // NOTE: /seasons/leagues/{leagueId} is NOT used — not verified live.
+    // Seasons are resolved via /leagues/{id}?include=currentSeason;seasons instead.
   },
   teams: {
     bySeason: (seasonId: number): string => `/teams/seasons/${seasonId}`,
@@ -29,8 +36,6 @@ export const ENDPOINTS = {
   fixtures: {
     bySeason: (seasonId: number): string => `/fixtures/seasons/${seasonId}`,
     byId: (id: number): string => `/fixtures/${id}`,
-    // TODO: verify filter syntax for league filtering in date range queries
-    between: (from: string, to: string): string => `/fixtures/between/${from}/${to}`,
   },
   standings: {
     bySeason: (seasonId: number): string => `/standings/seasons/${seasonId}`,
@@ -43,12 +48,14 @@ export const ENDPOINTS = {
 
 // Include strings for nested data
 export const INCLUDES = {
+  leagues: {
+    withSeasons: 'currentSeason;seasons',
+  },
   fixtures: {
     withParticipants: 'participants',
     withParticipantsAndRound: 'participants;round',
   },
   standings: {
-    withDetails: 'details',
     withParticipant: 'participant',
     withAll: 'participant;details',
   },

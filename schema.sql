@@ -95,6 +95,10 @@ CREATE TABLE IF NOT EXISTS odds_snapshots (
 
 CREATE INDEX IF NOT EXISTS idx_odds_fixture ON odds_snapshots(fixture_id);
 
+-- Unique index to support upsert conflict target (fixture + bookmaker + market)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_odds_snapshot
+  ON odds_snapshots (fixture_id, bookmaker, market);
+
 -- ============================================================
 -- Enrichment output tables
 -- ============================================================
@@ -166,7 +170,8 @@ CREATE INDEX IF NOT EXISTS idx_coverage_feature_key ON sportmonks_feature_covera
 
 CREATE TABLE IF NOT EXISTS match_feature_snapshots (
   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  fixture_id         bigint NOT NULL,
+  fixture_id         bigint,                         -- NULL for season-level snapshots (e.g. standings)
+  season_id          bigint REFERENCES seasons(id),  -- set for season-level snapshots
   feature_key        text NOT NULL,
   raw_payload        jsonb,
   normalized_payload jsonb,
@@ -178,5 +183,6 @@ CREATE TABLE IF NOT EXISTS match_feature_snapshots (
 );
 
 CREATE INDEX IF NOT EXISTS idx_snapshots_fixture_id  ON match_feature_snapshots(fixture_id);
+CREATE INDEX IF NOT EXISTS idx_snapshots_season_id   ON match_feature_snapshots(season_id);
 CREATE INDEX IF NOT EXISTS idx_snapshots_feature_key ON match_feature_snapshots(feature_key);
 CREATE INDEX IF NOT EXISTS idx_snapshots_fetched_at  ON match_feature_snapshots(fetched_at);

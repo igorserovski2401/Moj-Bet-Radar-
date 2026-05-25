@@ -32,6 +32,7 @@ export async function syncOddsForFixtures(
       // Store raw snapshot regardless of whether odds found
       await db.from('match_feature_snapshots').insert({
         fixture_id: fixtureId,
+        season_id: null,
         feature_key: 'odds',
         raw_payload: rawData as Record<string, unknown>,
         normalized_payload: null,
@@ -62,6 +63,7 @@ export async function syncOddsForFixtures(
         skipped++;
         await db.from('match_feature_snapshots').insert({
           fixture_id: fixtureId,
+          season_id: null,
           feature_key: 'odds',
           raw_payload: null,
           normalized_payload: null,

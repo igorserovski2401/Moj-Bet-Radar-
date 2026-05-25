@@ -95,13 +95,20 @@ export async function auditLeagueCoverage(
     const { SportmonksClient } = await import('./client');
     const client = SportmonksClient.fromEnv();
 
+    // Probe fixtures first so we can extract a sample fixture ID for odds probing
+    const fixturesProbeResult = await client.probe(`/fixtures/seasons/${options.seasonId}`);
+    const sampleFixtureId = fixturesProbeResult.available
+      ? (((fixturesProbeResult.summary as Record<string, unknown>)?.['id']) as number | undefined)
+      : undefined;
+
     const probeMap: Partial<Record<SportmonksFeatureKey, () => Promise<import('./client').ProbeResult>>> = {
-      fixtures:   () => client.probe(`/fixtures/seasons/${options.seasonId}`),
+      fixtures:   () => Promise.resolve(fixturesProbeResult),
       teams:      () => client.probe(`/teams/seasons/${options.seasonId}`),
       standings:  () => client.probe(`/standings/seasons/${options.seasonId}`),
-      odds:       () => options.seasonId
-        ? client.probe(`/odds/pre-match/fixtures/${options.seasonId}`)
-        : Promise.resolve({ available: false, error: 'no sample fixture id' }),
+      // Odds: only probe if we have a real sample fixture ID from the fixtures probe
+      ...(sampleFixtureId
+        ? { odds: () => client.probe(`/odds/pre-match/fixtures/${sampleFixtureId}`) }
+        : {}),
     };
 
     const records: FeatureCoverageResult[] = [];

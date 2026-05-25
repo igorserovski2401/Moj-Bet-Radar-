@@ -124,7 +124,8 @@ export type FeatureCoverageRow = {
 
 export type MatchFeatureSnapshotRow = {
   id?: string;
-  fixture_id: number;
+  fixture_id: number | null;  // null for season-level snapshots
+  season_id?: number | null;
   feature_key: string;
   raw_payload: unknown;
   normalized_payload: Record<string, unknown> | null;
