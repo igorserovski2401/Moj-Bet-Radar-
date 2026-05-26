@@ -1,0 +1,87 @@
+name: V1 Data Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      league_id:
+        description: 'League ID'
+        required: false
+        default: '271'
+      season_id:
+        description: 'Season ID'
+        required: false
+        default: '23584'
+      skip_odds:
+        description: 'Skip odds sync'
+        required: false
+        default: 'true'
+        type: choice
+        options: ['true', 'false']
+  schedule:
+    # Daily at 05:00 UTC
+    - cron: '0 5 * * *'
+
+jobs:
+  sync:
+    name: Sync Sportmonks → Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      SPORTMONKS_API_TOKEN: ${{ secrets.SPORTMONKS_API_TOKEN }}
+      SPORTMONKS_BASE_URL: https://api.sportmonks.com/v3/football
+      SPORTMONKS_AUTH_MODE: query
+      SUPABASE_URL: https://vdmrerkwmadufjcrrylj.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      MOCK_MODE: false
+      DEFAULT_COUNTRY: Serbia
+      DEFAULT_LEAGUE_ID: ${{ github.event.inputs.league_id || '271' }}
+      DEFAULT_SEASON_ID: ${{ github.event.inputs.season_id || '23584' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: claude/dreamy-wozniak-jDZWp
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test Sportmonks connection
+        run: npm run sportmonks:test
+
+      - name: Sync league data
+        run: |
+          SKIP_ODDS=${{ github.event.inputs.skip_odds || 'true' }}
+          if [ "$SKIP_ODDS" = "true" ]; then
+            npm run sync:v1 -- \
+              --league-id=$DEFAULT_LEAGUE_ID \
+              --season-id=$DEFAULT_SEASON_ID \
+              --skip-odds
+          else
+            npm run sync:v1 -- \
+              --league-id=$DEFAULT_LEAGUE_ID \
+              --season-id=$DEFAULT_SEASON_ID
+          fi
+
+      - name: Run enrichment
+        run: |
+          npm run enrich:v1 -- --season-id=$DEFAULT_SEASON_ID
+
+      - name: Generate publisher feed
+        run: |
+          npm run feed:real -- --season-id=$DEFAULT_SEASON_ID
+
+      - name: Upload feed artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: publisher-feed-${{ github.run_number }}
+          path: output/
+          retention-days: 7
