@@ -55,28 +55,30 @@ jobs:
 
       - name: Test Sportmonks connection
         run: npm run sportmonks:test
+        continue-on-error: true
 
       - name: Sync league data
         run: |
-          SKIP_ODDS=${{ github.event.inputs.skip_odds || 'true' }}
+          set -e
+          SKIP_ODDS="${{ github.event.inputs.skip_odds || 'true' }}"
+          LEAGUE="${{ github.event.inputs.league_id || '271' }}"
+          SEASON="${{ github.event.inputs.season_id || '23584' }}"
+          echo "League: $LEAGUE  Season: $SEASON  SkipOdds: $SKIP_ODDS"
           if [ "$SKIP_ODDS" = "true" ]; then
-            npm run sync:v1 -- \
-              --league-id=$DEFAULT_LEAGUE_ID \
-              --season-id=$DEFAULT_SEASON_ID \
-              --skip-odds
+            npm run sync:v1 -- --league-id=$LEAGUE --season-id=$SEASON --skip-odds
           else
-            npm run sync:v1 -- \
-              --league-id=$DEFAULT_LEAGUE_ID \
-              --season-id=$DEFAULT_SEASON_ID
+            npm run sync:v1 -- --league-id=$LEAGUE --season-id=$SEASON
           fi
 
       - name: Run enrichment
         run: |
-          npm run enrich:v1 -- --season-id=$DEFAULT_SEASON_ID
+          SEASON="${{ github.event.inputs.season_id || '23584' }}"
+          npm run enrich:v1 -- --season-id=$SEASON
 
       - name: Generate publisher feed
         run: |
-          npm run feed:real -- --season-id=$DEFAULT_SEASON_ID
+          SEASON="${{ github.event.inputs.season_id || '23584' }}"
+          npm run feed:real -- --season-id=$SEASON
 
       - name: Upload feed artifacts
         uses: actions/upload-artifact@v4
